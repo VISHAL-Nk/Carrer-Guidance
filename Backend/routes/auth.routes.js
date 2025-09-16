@@ -17,7 +17,7 @@ const authRouter = Router();
 // Validation utilities
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phoneRegex = /^\+?[1-9]\d{1,14}$/; // E.164 format
-const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&=\-])[A-Za-z\d@$!%*?&=\-]{8,}$/;
 
 const validateEmail = (email) => emailRegex.test(email);
 const validatePhone = (phone) => phoneRegex.test(phone);
@@ -41,7 +41,7 @@ setInterval(() => {
 authRouter.post('/register', registerRateLimit, sanitizeInput, async (req, res) => {
     try {
         const { firstName, middleName, lastName, email, password, confirmPassword, phone } = req.body;
-        
+        console.log(req.body);
         // Input validation
         if (!firstName || !lastName || !email || !password || !confirmPassword || !phone) {
             return res.status(400).json({ 

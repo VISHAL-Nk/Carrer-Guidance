@@ -21,7 +21,7 @@ if (missingEnvVars.length > 0) {
     process.exit(1);
 }
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
 const app = express();
@@ -37,19 +37,12 @@ app.use(helmet({
 
 // CORS configuration
 const corsOptions = {
-    origin: function (origin, callback) {
-        const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'];
-        
-        // Allow requests with no origin (mobile apps, Postman, etc.)
-        if (!origin) return callback(null, true);
-        
-        if (allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            logger.warn('CORS policy violation', { origin, allowedOrigins });
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
+    origin: process.env.ALLOWED_ORIGINS?.split(',') || [
+        'http://localhost:3000', 
+        'http://127.0.0.1:3000',
+        'http://localhost:5173', 
+        'http://127.0.0.1:5173'
+    ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
