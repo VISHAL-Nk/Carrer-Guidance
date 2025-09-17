@@ -41,7 +41,6 @@ setInterval(() => {
 authRouter.post('/register', registerRateLimit, sanitizeInput, async (req, res) => {
     try {
         const { firstName, middleName, lastName, email, password, confirmPassword, phone } = req.body;
-        console.log(req.body);
         // Input validation
         if (!firstName || !lastName || !email || !password || !confirmPassword || !phone) {
             return res.status(400).json({ 
