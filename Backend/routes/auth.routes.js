@@ -11,6 +11,7 @@ import {
     sanitizeInput 
 } from "../middleware/security.js";
 import { logger } from "../utils/logger.js";
+import UserProfile from "../models/UserProfile.models.js";
 
 const authRouter = Router();
 
@@ -183,6 +184,15 @@ authRouter.post('/login', authRateLimit, sanitizeInput, async (req, res) => {
         if (!isPasswordValid) {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
+
+        // Create UserProfile if it doesn't exist
+        const existingProfile = await UserProfile.findById(user._id);
+        if (!existingProfile) {
+            await UserProfile.create({ _id: user._id });
+        }
+        
+        // Calculate profile completion
+        const { percentage, isComplete } = await user.calculateProfileCompletion();
         
         // Generate JWT token
         const token = jwt.sign(
@@ -218,6 +228,10 @@ authRouter.post('/login', authRateLimit, sanitizeInput, async (req, res) => {
                 phone: user.phone,
                 firstName: user.firstName,
                 lastName: user.lastName
+            },
+            profileCompletion: {
+                isComplete: isComplete,
+                percentage: percentage
             },
             token
         });
