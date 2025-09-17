@@ -8,6 +8,7 @@ import connectDB from './database/mongoose.js';
 import dotenv from 'dotenv';
 import { securityHeaders } from './middleware/security.js';
 import { logger, requestLogger } from './utils/logger.js';
+import profileRouter from './routes/profile.routes.js';
 
 // Load environment variables
 dotenv.config();
@@ -94,6 +95,7 @@ app.get('/health', (req, res) => {
 
 // API routes
 app.use('/api/v1/auth', authRouter);
+app.use('/api/v1/profile', profileRouter);
 
 app.get('/api/v1', (req, res) => {
     res.json({
