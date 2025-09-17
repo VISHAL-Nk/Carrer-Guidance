@@ -188,7 +188,7 @@ function calculateCareerPath(responses) {
   };
 }
 
-module.exports = {
+export {
   careerQuestions,
   careerPaths,
   questionCategories,

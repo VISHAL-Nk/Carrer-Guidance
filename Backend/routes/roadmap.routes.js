@@ -3,10 +3,27 @@ import OpenAI from 'openai';
 
 const roadmapRouter = express.Router();
 
-// Initialize OpenAI client (make sure to set your API key in environment variables)
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Initialize OpenRouter client lazily (when first needed)
+let openai = null;
+
+function getOpenAIClient() {
+  if (!openai && process.env.OPENROUTER_API_KEY && process.env.OPENROUTER_API_KEY !== 'your-openrouter-api-key-here') {
+    try {
+      openai = new OpenAI({
+        baseURL: process.env.OPENAI_BASE_URL || "https://openrouter.ai/api/v1",
+        apiKey: process.env.OPENROUTER_API_KEY,
+        defaultHeaders: {
+          "HTTP-Referer": process.env.SITE_URL || "http://localhost:5000",
+          "X-Title": process.env.SITE_NAME || "Career Guidance System",
+        },
+      });
+    } catch (error) {
+      console.warn('OpenRouter client initialization failed:', error.message);
+      return null;
+    }
+  }
+  return openai;
+}
 
 // Custom prompt for generating roadmaps
 const ROADMAP_PROMPT = `Generate a detailed learning roadmap for the given topic. 
@@ -58,11 +75,11 @@ function validateMermaidSyntax(mermaidCode) {
 }
 
 // Function to generate roadmap with AI
-async function generateRoadmap(topic, maxRetries = 3) {
+async function generateRoadmap(client, topic, maxRetries = 3) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const completion = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
+      const completion = await client.chat.completions.create({
+        model: process.env.OPENAI_MODEL || "deepseek/deepseek-chat-v3.1:free",
         messages: [
           {
             role: "system",
@@ -121,9 +138,18 @@ roadmapRouter.get('/', async (req, res) => {
       });
     }
 
+    // Get OpenAI client (lazy initialization)
+    const client = getOpenAIClient();
+    if (!client) {
+      return res.status(500).json({
+        error: 'Service Unavailable',
+        message: 'OpenRouter client could not be initialized. Please check API key configuration.'
+      });
+    }
+
     // Generate roadmap with retry mechanism
     console.log(`Generating roadmap for topic: ${topic}`);
-    const result = await generateRoadmap(topic.trim());
+    const result = await generateRoadmap(client, topic.trim());
 
     // Send successful response
     res.json({
