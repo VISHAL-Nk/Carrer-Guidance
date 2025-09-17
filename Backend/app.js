@@ -9,6 +9,9 @@ import dotenv from 'dotenv';
 import { securityHeaders } from './middleware/security.js';
 import { logger, requestLogger } from './utils/logger.js';
 import profileRouter from './routes/profile.routes.js';
+import collegeRouter from './routes/college.routes.js';
+import questionRouter from './routes/question10.routes.js';
+import roadmapRouter from './routes/roadmap.routes.js';
 
 // Load environment variables
 dotenv.config();
@@ -96,7 +99,9 @@ app.get('/health', (req, res) => {
 // API routes
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/profile', profileRouter);
-// app.use('/api/v1/profile', profileRouter);
+app.use('/api/v1/colleges', collegeRouter);
+app.use('/api/v1/questions', questionRouter);
+app.use('/api/v1/roadmap', roadmapRouter);
 
 app.get('/api/v1', (req, res) => {
     res.json({
@@ -104,6 +109,10 @@ app.get('/api/v1', (req, res) => {
         version: '1.0.0',
         endpoints: {
             auth: '/api/v1/auth',
+            profile: '/api/v1/profile',
+            colleges: '/api/v1/colleges',
+            questions: '/api/v1/questions',
+            roadmap: '/api/v1/roadmap',
             health: '/health'
         }
     });
