@@ -7,6 +7,7 @@ const questionRouter = express.Router();
 
 // Middleware to verify JWT token
 const authenticateToken = (req, res, next) => {
+<<<<<<< HEAD
     // Check for token in cookies first, then in Authorization header
     let token = req.cookies.token;
     
@@ -16,6 +17,9 @@ const authenticateToken = (req, res, next) => {
             token = authHeader.substring(7); // Remove 'Bearer ' prefix
         }
     }
+=======
+    const token = req.cookies.token;
+>>>>>>> 3014e9956fe93baa7b850b0ec92cf75781a29c6d
     
     if (!token) {
         return res.status(401).json({ message: 'Authentication token is missing' });
