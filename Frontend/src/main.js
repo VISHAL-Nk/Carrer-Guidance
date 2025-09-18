@@ -5,16 +5,20 @@ let currentUser = null;
 let userProfile = null;
 
 // Utility functions
-function isAuthenticated() {
-  const token = document.cookie
-    .split("; ")
-    .find((row) => row.startsWith("token="))
-    ?.split("=")[1];
-  return token;
+function getCookieValue(cookieName) {
+  const cookies = document.cookie.split('; ');
+  for (let cookie of cookies) {
+    const [name, value] = cookie.split('=');
+    if (name === cookieName) {
+      return decodeURIComponent(value);
+    }
+  }
+  return null;
 }
 
 function isAuthenticated() {
-  const token = getTokenFromCookie() || localStorage.getItem('authToken');
+  // Check for token in cookies first, then localStorage as fallback
+  const token = getCookieValue('token') || localStorage.getItem('authToken');
   return !!token;
 }
 
@@ -88,6 +92,11 @@ function loginScreen() {
         const data = await response.json();
         currentUser = data.user;
         
+        // Store token in localStorage as fallback if not in cookies
+        if (data.token) {
+          localStorage.setItem('authToken', data.token);
+        }
+        
         showToast("Login successful!", 'success');
         
         // Check profile completion and show toast if incomplete
@@ -97,7 +106,10 @@ function loginScreen() {
           }, 1000);
         }
         
-        await renderApp();
+        // Small delay to ensure cookies are set
+        setTimeout(async () => {
+          await renderApp();
+        }, 100);
       } else {
         const data = await response.json();
         showToast("Login failed: " + data.message, 'error');
@@ -389,12 +401,18 @@ async function renderDashboard() {
         method: "POST",
         credentials: "include",
       });
+      
+      // Clear stored tokens
+      localStorage.removeItem('authToken');
+      
       showToast("Logged out successfully!", 'success');
       currentUser = null;
       userProfile = null;
       await renderApp();
     } catch (error) {
       console.error("Logout error:", error);
+      // Clear stored tokens even if request fails
+      localStorage.removeItem('authToken');
       showToast("Logout completed", 'info');
       currentUser = null;
       userProfile = null;

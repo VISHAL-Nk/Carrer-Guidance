@@ -41,7 +41,7 @@ app.use(helmet({
 
 // CORS configuration
 const corsOptions = {
-    origin: process.env.ALLOWED_ORIGINS?.split(',') || [
+    origin: [
         'http://localhost:3000', 
         'http://127.0.0.1:3000',
         'http://localhost:5173', 
@@ -49,7 +49,8 @@ const corsOptions = {
         'http://localhost:8000',
         'http://127.0.0.1:8000',
         'http://localhost:8080',
-        'http://127.0.0.1:8080'
+        'http://127.0.0.1:8080',
+        'http://127.0.0.1:3002'
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
