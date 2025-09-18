@@ -5,12 +5,37 @@ let currentUser = null;
 let userProfile = null;
 
 // Utility functions
-function isAuthenticated() {
+function getTokenFromCookie() {
   const token = document.cookie
     .split("; ")
     .find((row) => row.startsWith("token="))
     ?.split("=")[1];
+  return token;
+}
+
+function isAuthenticated() {
+  const token = getTokenFromCookie() || localStorage.getItem('authToken');
   return !!token;
+}
+
+// Helper function to make authenticated API calls
+async function authenticatedFetch(url, options = {}) {
+  const token = getTokenFromCookie() || localStorage.getItem('authToken');
+  
+  const defaultOptions = {
+    credentials: "include",
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  };
+
+  // If no cookie token but we have localStorage token, add Authorization header
+  if (!getTokenFromCookie() && localStorage.getItem('authToken')) {
+    defaultOptions.headers.Authorization = `Bearer ${localStorage.getItem('authToken')}`;
+  }
+
+  return fetch(url, { ...defaultOptions, ...options });
 }
 
 function showToast(message, type = 'info') {
@@ -82,6 +107,11 @@ function loginScreen() {
       if (response.ok) {
         const data = await response.json();
         currentUser = data.user;
+        
+        // Store token in localStorage as fallback if cookies don't work
+        if (data.token) {
+          localStorage.setItem('authToken', data.token);
+        }
         
         showToast("Login successful!", 'success');
         
@@ -288,12 +318,16 @@ function showProfileCompletionToast(percentage) {
 async function renderDashboard() {
   // Fetch user profile
   try {
-    const response = await fetch("http://localhost:5000/api/v1/profile", {
-      credentials: "include",
-    });
+    const response = await authenticatedFetch("http://localhost:5000/api/v1/profile");
     if (response.ok) {
       const data = await response.json();
       userProfile = data.profile;
+    } else if (response.status === 401) {
+      // Token is invalid, redirect to login
+      localStorage.removeItem('authToken');
+      currentUser = null;
+      await renderApp();
+      return;
     }
   } catch (error) {
     console.error("Error fetching profile:", error);
@@ -385,12 +419,12 @@ async function renderDashboard() {
         credentials: "include",
       });
       showToast("Logged out successfully!", 'success');
-      currentUser = null;
-      userProfile = null;
-      await renderApp();
     } catch (error) {
       console.error("Logout error:", error);
       showToast("Logout completed", 'info');
+    } finally {
+      // Clear both cookie and localStorage
+      localStorage.removeItem('authToken');
       currentUser = null;
       userProfile = null;
       await renderApp();
@@ -548,9 +582,7 @@ function renderCollegeCards(colleges) {
 async function careerGuidanceScreen() {
   // Check if user can access career guidance
   try {
-    const response = await fetch("http://localhost:5000/api/v1/questions", {
-      credentials: "include",
-    });
+    const response = await authenticatedFetch("http://localhost:5000/api/v1/questions");
 
     if (!response.ok) {
       const errorData = await response.json();
@@ -774,11 +806,9 @@ async function submitAssessment() {
   }));
 
   try {
-    const response = await fetch("http://localhost:5000/api/v1/questions/assess", {
+    const response = await authenticatedFetch("http://localhost:5000/api/v1/questions/assess", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ responses }),
-      credentials: "include",
+      body: JSON.stringify({ responses })
     });
 
     if (response.ok) {
@@ -807,9 +837,7 @@ async function showResults(assessmentData) {
   // Generate mermaid diagram
   let mermaidCode = '';
   try {
-    const roadmapResponse = await fetch(`http://localhost:5000/api/v1/roadmap?topic=${encodeURIComponent(pathData.name)}`, {
-      credentials: "include",
-    });
+    const roadmapResponse = await authenticatedFetch(`http://localhost:5000/api/v1/roadmap?topic=${encodeURIComponent(pathData.name)}`);
     
     if (roadmapResponse.ok) {
       const roadmapData = await roadmapResponse.json();
@@ -983,17 +1011,15 @@ function profileUpdateScreen() {
     const stream = document.getElementById("stream").value;
 
     try {
-      const response = await fetch("http://localhost:5000/api/v1/profile", {
+      const response = await authenticatedFetch("http://localhost:5000/api/v1/profile", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           dob,
           gender,
           location,
           class: classValue,
           stream,
-        }),
-        credentials: "include",
+        })
       });
 
       if (response.ok) {

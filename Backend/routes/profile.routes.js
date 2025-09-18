@@ -5,6 +5,21 @@ import User from "../models/User.models.js";
 
 const profileRouter = Router();
 
+// Helper function to extract and verify token
+const getTokenFromRequest = (req) => {
+    // Check for token in cookies first, then in Authorization header
+    let token = req.cookies.token;
+    
+    if (!token && req.headers.authorization) {
+        const authHeader = req.headers.authorization;
+        if (authHeader.startsWith('Bearer ')) {
+            token = authHeader.substring(7); // Remove 'Bearer ' prefix
+        }
+    }
+    
+    return token;
+};
+
 profileRouter.put('/', async(req, res) => {
     try {
         const profileData = req.body;
@@ -14,7 +29,7 @@ profileRouter.put('/', async(req, res) => {
         if(!profileData.stream && profileData.class === "10th"){
             profileData.stream = "None";
         }
-        const token = req.cookies.token;
+        const token = getTokenFromRequest(req);
         if (!token) {
             return res.status(401).json({ message: 'Authentication token is missing' });
         }
@@ -73,7 +88,7 @@ profileRouter.put('/', async(req, res) => {
 // Get profile completion status
 profileRouter.get('/completion', async (req, res) => {
     try {
-        const token = req.cookies.token;
+        const token = getTokenFromRequest(req);
         if (!token) {
             return res.status(401).json({ message: 'Authentication token is missing' });
         }
@@ -108,7 +123,7 @@ profileRouter.get('/completion', async (req, res) => {
 // Get current user profile
 profileRouter.get('/', async (req, res) => {
     try {
-        const token = req.cookies.token;
+        const token = getTokenFromRequest(req);
         if (!token) {
             return res.status(401).json({ message: 'Authentication token is missing' });
         }
