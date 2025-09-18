@@ -7,7 +7,6 @@ const questionRouter = express.Router();
 
 // Middleware to verify JWT token
 const authenticateToken = (req, res, next) => {
-<<<<<<< HEAD
     // Check for token in cookies first, then in Authorization header
     let token = req.cookies.token;
     
@@ -17,9 +16,7 @@ const authenticateToken = (req, res, next) => {
             token = authHeader.substring(7); // Remove 'Bearer ' prefix
         }
     }
-=======
-    const token = req.cookies.token;
->>>>>>> 3014e9956fe93baa7b850b0ec92cf75781a29c6d
+
     
     if (!token) {
         return res.status(401).json({ message: 'Authentication token is missing' });
@@ -36,8 +33,7 @@ const authenticateToken = (req, res, next) => {
 
 // Middleware for input validation
 const validateAssessmentData = (req, res, next) => {
-  const { responses, studentInfo } = req.body;
-  
+  const { responses } = req.body;
   if (!responses || !Array.isArray(responses)) {
     return res.status(400).json({
       error: 'Invalid responses format. Expected array of responses.'
@@ -198,8 +194,8 @@ questionRouter.post('/assess', authenticateToken, validateAssessmentData, async 
 });
 
 // GET /api/v1/questions/career-paths - Get all available career paths
-questionRouter.get('/career-paths', (req, res) => {
-  try {
+questionRouter.get('/career-paths', (_req, res) => {
+  try{
     res.json({
       success: true,
       data: {
@@ -217,8 +213,8 @@ questionRouter.get('/career-paths', (req, res) => {
 });
 
 // GET /api/v1/questions/stats - Get assessment statistics
-questionRouter.get('/stats', (req, res) => {
-  try {
+questionRouter.get('/stats', (_req, res) => {
+  try{
     const stats = {
       totalQuestions: careerQuestions.length,
       questionsByCategory: careerQuestions.reduce((acc, q) => {
@@ -244,8 +240,8 @@ questionRouter.get('/stats', (req, res) => {
 });
 
 // Error handling middleware
-questionRouter.use((error, req, res, next) => {
-  console.error('Router Error:', error);
+questionRouter.use((error, _req, res, _next) => {
+
   res.status(500).json({
     success: false,
     error: 'Internal server error',

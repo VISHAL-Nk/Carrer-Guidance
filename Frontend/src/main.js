@@ -5,11 +5,7 @@ let currentUser = null;
 let userProfile = null;
 
 // Utility functions
-<<<<<<< HEAD
-function getTokenFromCookie() {
-=======
 function isAuthenticated() {
->>>>>>> 3014e9956fe93baa7b850b0ec92cf75781a29c6d
   const token = document.cookie
     .split("; ")
     .find((row) => row.startsWith("token="))
@@ -22,29 +18,6 @@ function isAuthenticated() {
   return !!token;
 }
 
-<<<<<<< HEAD
-// Helper function to make authenticated API calls
-async function authenticatedFetch(url, options = {}) {
-  const token = getTokenFromCookie() || localStorage.getItem('authToken');
-  
-  const defaultOptions = {
-    credentials: "include",
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers
-    }
-  };
-
-  // If no cookie token but we have localStorage token, add Authorization header
-  if (!getTokenFromCookie() && localStorage.getItem('authToken')) {
-    defaultOptions.headers.Authorization = `Bearer ${localStorage.getItem('authToken')}`;
-  }
-
-  return fetch(url, { ...defaultOptions, ...options });
-}
-
-=======
->>>>>>> 3014e9956fe93baa7b850b0ec92cf75781a29c6d
 function showToast(message, type = 'info') {
   const toast = document.createElement('div');
   toast.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-sm transition-all duration-300 ${
@@ -115,12 +88,6 @@ function loginScreen() {
         const data = await response.json();
         currentUser = data.user;
         
-<<<<<<< HEAD
-        // Store token in localStorage as fallback if cookies don't work
-        if (data.token) {
-          localStorage.setItem('authToken', data.token);
-        }
-        
         showToast("Login successful!", 'success');
         
         // Check profile completion and show toast if incomplete
@@ -130,17 +97,6 @@ function loginScreen() {
           }, 1000);
         }
         
-=======
-        showToast("Login successful!", 'success');
-        
-        // Check profile completion and show toast if incomplete
-        if (data.profileCompletion && !data.profileCompletion.isComplete) {
-          setTimeout(() => {
-            showProfileCompletionToast(data.profileCompletion.percentage);
-          }, 1000);
-        }
-        
->>>>>>> 3014e9956fe93baa7b850b0ec92cf75781a29c6d
         await renderApp();
       } else {
         const data = await response.json();
@@ -337,25 +293,12 @@ function showProfileCompletionToast(percentage) {
 async function renderDashboard() {
   // Fetch user profile
   try {
-<<<<<<< HEAD
-    const response = await authenticatedFetch("http://localhost:5000/api/v1/profile");
-    if (response.ok) {
-      const data = await response.json();
-      userProfile = data.profile;
-    } else if (response.status === 401) {
-      // Token is invalid, redirect to login
-      localStorage.removeItem('authToken');
-      currentUser = null;
-      await renderApp();
-      return;
-=======
     const response = await fetch("http://localhost:5000/api/v1/profile", {
       credentials: "include",
     });
     if (response.ok) {
       const data = await response.json();
       userProfile = data.profile;
->>>>>>> 3014e9956fe93baa7b850b0ec92cf75781a29c6d
     }
   } catch (error) {
     console.error("Error fetching profile:", error);
@@ -447,21 +390,12 @@ async function renderDashboard() {
         credentials: "include",
       });
       showToast("Logged out successfully!", 'success');
-<<<<<<< HEAD
-    } catch (error) {
-      console.error("Logout error:", error);
-      showToast("Logout completed", 'info');
-    } finally {
-      // Clear both cookie and localStorage
-      localStorage.removeItem('authToken');
-=======
       currentUser = null;
       userProfile = null;
       await renderApp();
     } catch (error) {
       console.error("Logout error:", error);
       showToast("Logout completed", 'info');
->>>>>>> 3014e9956fe93baa7b850b0ec92cf75781a29c6d
       currentUser = null;
       userProfile = null;
       await renderApp();
@@ -619,13 +553,9 @@ function renderCollegeCards(colleges) {
 async function careerGuidanceScreen() {
   // Check if user can access career guidance
   try {
-<<<<<<< HEAD
-    const response = await authenticatedFetch("http://localhost:5000/api/v1/questions");
-=======
     const response = await fetch("http://localhost:5000/api/v1/questions", {
       credentials: "include",
     });
->>>>>>> 3014e9956fe93baa7b850b0ec92cf75781a29c6d
 
     if (!response.ok) {
       const errorData = await response.json();
@@ -849,17 +779,11 @@ async function submitAssessment() {
   }));
 
   try {
-<<<<<<< HEAD
-    const response = await authenticatedFetch("http://localhost:5000/api/v1/questions/assess", {
-      method: "POST",
-      body: JSON.stringify({ responses })
-=======
     const response = await fetch("http://localhost:5000/api/v1/questions/assess", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ responses }),
       credentials: "include",
->>>>>>> 3014e9956fe93baa7b850b0ec92cf75781a29c6d
     });
 
     if (response.ok) {
@@ -888,13 +812,9 @@ async function showResults(assessmentData) {
   // Generate mermaid diagram
   let mermaidCode = '';
   try {
-<<<<<<< HEAD
-    const roadmapResponse = await authenticatedFetch(`http://localhost:5000/api/v1/roadmap?topic=${encodeURIComponent(pathData.name)}`);
-=======
     const roadmapResponse = await fetch(`http://localhost:5000/api/v1/roadmap?topic=${encodeURIComponent(pathData.name)}`, {
       credentials: "include",
     });
->>>>>>> 3014e9956fe93baa7b850b0ec92cf75781a29c6d
     
     if (roadmapResponse.ok) {
       const roadmapData = await roadmapResponse.json();
@@ -921,7 +841,6 @@ async function showResults(assessmentData) {
           ${pathData.subjects.map(subject => 
             `<span class="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">${subject}</span>`
           ).join('')}
-<<<<<<< HEAD
         </div>
       </div>
       <div class="mb-6">
@@ -933,19 +852,6 @@ async function showResults(assessmentData) {
         </div>
       </div>
       <div class="mb-6">
-=======
-        </div>
-      </div>
-      <div class="mb-6">
-        <h4 class="text-lg font-semibold text-gray-800 mb-3">Career Options:</h4>
-        <div class="flex flex-wrap gap-2">
-          ${pathData.careerOptions.map(career => 
-            `<span class="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">${career}</span>`
-          ).join('')}
-        </div>
-      </div>
-      <div class="mb-6">
->>>>>>> 3014e9956fe93baa7b850b0ec92cf75781a29c6d
         <h4 class="text-lg font-semibold text-gray-800 mb-3">Institutions:</h4>
         <div class="flex flex-wrap gap-2">
           ${pathData.institutions.map(institution => 
@@ -1082,26 +988,17 @@ function profileUpdateScreen() {
     const stream = document.getElementById("stream").value;
 
     try {
-<<<<<<< HEAD
-      const response = await authenticatedFetch("http://localhost:5000/api/v1/profile", {
-        method: "PUT",
-=======
       const response = await fetch("http://localhost:5000/api/v1/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
->>>>>>> 3014e9956fe93baa7b850b0ec92cf75781a29c6d
         body: JSON.stringify({
           dob,
           gender,
           location,
           class: classValue,
           stream,
-<<<<<<< HEAD
-        })
-=======
         }),
         credentials: "include",
->>>>>>> 3014e9956fe93baa7b850b0ec92cf75781a29c6d
       });
 
       if (response.ok) {
