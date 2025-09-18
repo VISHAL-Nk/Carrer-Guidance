@@ -6,20 +6,119 @@ let userProfile = null;
 
 // Utility functions
 function getCookieValue(cookieName) {
+  // More robust cookie parsing
+  const name = cookieName + "=";
+  const decodedCookie = decodeURIComponent(document.cookie);
+  const cookieArray = decodedCookie.split(';');
+  
+  for (let i = 0; i < cookieArray.length; i++) {
+    let cookie = cookieArray[i].trim();
+    if (cookie.indexOf(name) == 0) {
+      return cookie.substring(name.length, cookie.length);
+    }
+  }
+  
+  // Fallback to original method
   const cookies = document.cookie.split('; ');
   for (let cookie of cookies) {
-    const [name, value] = cookie.split('=');
-    if (name === cookieName) {
+    const [cookieName2, value] = cookie.split('=');
+    if (cookieName2 === cookieName) {
       return decodeURIComponent(value);
     }
   }
+  
   return null;
 }
 
+// Debug function to inspect all cookies and storage
+function debugAuth() {
+  console.log('=== AUTH DEBUG INFO ===');
+  console.log('Current URL:', window.location.href);
+  console.log('Document domain:', document.domain);
+  console.log('All cookies (accessible to JS):', document.cookie);
+  console.log('LocalStorage token:', localStorage.getItem('authToken'));
+  console.log('All localStorage keys:', Object.keys(localStorage));
+  
+  console.log('Note: The "token" cookie is httpOnly and cannot be accessed by JavaScript');
+  console.log('This is a security feature. The server uses the httpOnly cookie for authentication.');
+  console.log('Client-side authentication checks use localStorage token.');
+  
+  console.log('========================');
+}
+
+// Test function to try to access the token you see in DevTools
+function testCookieAccess() {
+  console.log('Testing cookie access...');
+  debugAuth();
+  
+  // Check if we're on the right domain/port
+  const currentHost = window.location.host;
+  console.log('Current host:', currentHost);
+  
+  if (currentHost !== '127.0.0.1:3002') {
+    console.warn('Cookie domain mismatch! Token stored on 127.0.0.1:3002 but current host is:', currentHost);
+    console.log('This could be why you cannot access the token');
+  }
+}
+
+// Check if backend server is running
+async function checkServerStatus() {
+  try {
+    const response = await fetch("http://localhost:5000/health", {
+      method: 'GET',
+      signal: AbortSignal.timeout(5000) // 5 second timeout
+    });
+    return response.ok;
+  } catch (error) {
+    console.error("Backend server is not responding:", error.message);
+    return false;
+  }
+}
+
 function isAuthenticated() {
-  // Check for token in cookies first, then localStorage as fallback
-  const token = getCookieValue('token') || localStorage.getItem('authToken');
-  return !!token;
+  // Since the cookie is httpOnly (can't be accessed by JavaScript), 
+  // we rely on localStorage for client-side authentication checks
+  // The server will use the httpOnly cookie for actual API authentication
+  const localStorageToken = localStorage.getItem('authToken');
+  
+  // Debug output (remove after debugging)
+  console.log('Auth check - LocalStorage token:', localStorageToken ? 'EXISTS' : 'MISSING');
+  console.log('Auth check - Result:', !!localStorageToken);
+  
+  return !!localStorageToken;
+}
+
+// Handle authentication errors consistently
+async function handleAuthError(retryCount = 0) {
+  // If this is the first failure, try once more after a short delay
+  // This handles cases where server is just starting up
+  if (retryCount === 0) {
+    console.log("Authentication failed, retrying in 2 seconds...");
+    setTimeout(async () => {
+      try {
+        const response = await fetch("http://localhost:5000/api/v1/profile", {
+          credentials: "include",
+        });
+        if (response.ok) {
+          console.log("Retry successful, authentication is working");
+          await renderDashboard();
+          return;
+        }
+      } catch (error) {
+        console.log("Retry failed, proceeding with logout");
+      }
+      
+      // If retry also fails, proceed with logout
+      await handleAuthError(1);
+    }, 2000);
+    return;
+  }
+  
+  showToast("Your session has expired. Please log in again.", 'error');
+  // Clear localStorage token (httpOnly cookie will be cleared by server on logout)
+  localStorage.removeItem('authToken');
+  // Redirect to login
+  await renderApp();
 }
 
 function showToast(message, type = 'info') {
@@ -96,6 +195,10 @@ function loginScreen() {
         if (data.token) {
           localStorage.setItem('authToken', data.token);
         }
+        
+        // Debug authentication state after login
+        console.log('Login successful, debugging auth state:');
+        debugAuth();
         
         showToast("Login successful!", 'success');
         
@@ -303,6 +406,13 @@ function showProfileCompletionToast(percentage) {
 
 // Main dashboard
 async function renderDashboard() {
+  // Check if server is available first
+  const serverRunning = await checkServerStatus();
+  if (!serverRunning) {
+    showToast("Backend server is not responding. Please start the server.", 'error');
+    return;
+  }
+
   // Fetch user profile
   try {
     const response = await fetch("http://localhost:5000/api/v1/profile", {
@@ -311,9 +421,18 @@ async function renderDashboard() {
     if (response.ok) {
       const data = await response.json();
       userProfile = data.profile;
+    } else if (response.status === 401) {
+      // Handle authentication errors (401 Unauthorized)
+      console.log("Authentication failed - token may be expired");
+      await handleAuthError();
+      return;
+    } else {
+      console.error("Profile fetch failed with status:", response.status);
     }
   } catch (error) {
-    console.error("Error fetching profile:", error);
+    console.error("Network error fetching profile:", error);
+    // Don't clear tokens for network errors - server might just be down
+    showToast("Cannot connect to server. Please start the backend server.", 'error');
   }
 
   app.innerHTML = `
@@ -446,13 +565,19 @@ async function collegeListScreen() {
       filters = data.data.filters;
       userClass = data.data.userClass;
     } else {
+      // Handle authentication errors (401 Unauthorized)
+      if (response.status === 401) {
+        await handleAuthError();
+        return;
+      }
+
       const errorData = await response.json();
       showToast(errorData.message, 'error');
       return;
     }
   } catch (error) {
-    console.error("Error fetching colleges:", error);
-    showToast("Error fetching colleges", 'error');
+    console.error("Network error fetching colleges (server may be down):", error);
+    showToast("Cannot connect to server. Please check if the backend is running.", 'error');
     return;
   }
 
@@ -576,6 +701,12 @@ async function careerGuidanceScreen() {
     });
 
     if (!response.ok) {
+      // Handle authentication errors (401 Unauthorized)
+      if (response.status === 401) {
+        await handleAuthError();
+        return;
+      }
+
       const errorData = await response.json();
       if (errorData.status === 'update_underway') {
         // Show update underway message for 12th grade students
@@ -607,8 +738,8 @@ async function careerGuidanceScreen() {
     startCareerAssessment(data.data.questions);
 
   } catch (error) {
-    console.error("Error accessing career guidance:", error);
-    showToast("Error accessing career guidance", 'error');
+    console.error("Network error accessing career guidance (server may be down):", error);
+    showToast("Cannot connect to server. Please check if the backend is running.", 'error');
   }
 }
 
@@ -1065,7 +1196,29 @@ async function renderApp() {
   }
 }
 
+// Expose debug functions globally for console testing
+window.debugAuth = debugAuth;
+window.testCookieAccess = testCookieAccess;
+window.getCookieValue = getCookieValue;
+
+// Expose debug functions globally for console testing
+window.debugAuth = debugAuth;
+window.testCookieAccess = testCookieAccess;
+window.getCookieValue = getCookieValue;
+window.checkServerStatus = checkServerStatus;
+
 // Initialize app
 (async () => {
+  console.log('App initializing...');
+  testCookieAccess(); // Run cookie test on startup
+  
+  // Check server status
+  const serverRunning = await checkServerStatus();
+  if (!serverRunning) {
+    showToast("⚠️ Backend server is not running. Please start it on port 5000.", 'warning');
+    console.warn("Backend server is not running on http://localhost:5000");
+    console.log("To start the backend server, run: cd Backend && npm start");
+  }
+  
   await renderApp();
 })();
